@@ -3,11 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
 VisualStudioVersion = 12.0.30723.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleApp", "01-mark\ConsoleApp.csproj", "{3D72C5C7-6E76-4470-A373-0FDF14A7943A}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleApp", "ConsoleApp\ConsoleApp.csproj", "{3D72C5C7-6E76-4470-A373-0FDF14A7943A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MarkdownConverter.Tests", "01-mark.Tests\MarkdownConverter.Tests.csproj", "{04B11C60-ABC7-4D85-B15D-D9DDF1EA6385}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MarkdownConverter.Tests", "MarkdownConverter.Tests\MarkdownConverter.Tests.csproj", "{04B11C60-ABC7-4D85-B15D-D9DDF1EA6385}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MarkdownConverter", "Markdown\MarkdownConverter.csproj", "{B539A6F5-8035-455D-B65E-36025E1ADD21}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MarkdownConverter", "MarkdownConverter\MarkdownConverter.csproj", "{B539A6F5-8035-455D-B65E-36025E1ADD21}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -7,7 +7,7 @@
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>MarkdownConverter.Tests</RootNamespace>
-    <AssemblyName>01-mark.Tests</AssemblyName>
+    <AssemblyName>MarkdownConverter.Tests</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <ProjectTypeGuids>{3AC096D0-A1C2-E12C-1390-A8335801FDAB};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
@@ -54,7 +54,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Markdown\MarkdownConverter.csproj">
+    <ProjectReference Include="..\MarkdownConverter\MarkdownConverter.csproj">
       <Project>{b539a6f5-8035-455d-b65e-36025e1add21}</Project>
       <Name>MarkdownConverter</Name>
     </ProjectReference>

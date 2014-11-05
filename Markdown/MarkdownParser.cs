@@ -4,9 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace MarkdownConverter
-{
-    public class MarkdownParser
-    {
+namespace MarkdownConverter {
+    public class MarkdownConverter {
+        public static string ConvertToHTML(string text) {
+            return text;
+        }
     }
 }

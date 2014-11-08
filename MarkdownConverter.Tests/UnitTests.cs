@@ -6,7 +6,8 @@ namespace MarkdownConverter.Tests {
     [TestClass]
     public class UnitTests {
         public void TestConverter(string inputText, string expectedResult) {
-            Assert.AreEqual(expectedResult, MarkdownConverter.ConvertToHTML(inputText));
+            var result = MarkdownConverter.ConvertToHTML(inputText);
+            Assert.AreEqual(expectedResult, result);
         }
 
         [TestMethod]
@@ -76,6 +77,47 @@ namespace MarkdownConverter.Tests {
                 "results in n new paragraphs and a linebreak in the beginning of the last one.<br/>" +
                 "If there's an even number of linebreaks in a row,</p>" +
                 "<p>only new paragraphs are created.</p>");
+        }
+
+        [TestMethod]
+        public void UnderscoresInTheSameLine() {
+            TestConverter(
+                "_Text enclosed in underscores should become enclosed in em tags._",
+
+                "<p><em>Text enclosed in underscores should become enclosed in em tags.</em></p>");
+        }
+
+        [TestMethod]
+        public void UnderscoresInDifferentLinesAndParagraphs() {
+            TestConverter(
+                "_That should work\n" +
+                "even if underscores are in different lines_ _or\n" +
+                "\n" +
+                "even paragraphs._\n" +
+                "In _that_ case additional em tags may be added to ensure that tags don't intersect.",
+
+                "<p><em>That should work<br/>" +
+                "even if underscores are in different lines</em> <em>or</em></p>" +
+                "<p><em>even paragraphs.</em><br/>" +
+                "In <em>that</em> case additional em tags may be added to ensure that tags don't intersect.</p>");
+        }
+
+        [TestMethod]
+        public void UnpairedUnderscores() {
+            TestConverter(
+                "Unpaired underscores _should not count as proper formatting.\n" +
+                "They should be left as is.",
+
+                "<p>Unpaired underscores _should not count as proper formatting.<br/>" +
+                "They should be left as is.</p>");
+        }
+
+        [TestMethod]
+        public void UnderscoresInsideWords() {
+            TestConverter(
+                "Underscores _i_nside words_ or_ connecting_words _also shouldn't count as _forma_tting.",
+
+                "<p>Underscores <em>i_nside words</em> or<em> connecting_words </em>also shouldn't count as _forma_tting.</p>");
         }
     }
 }

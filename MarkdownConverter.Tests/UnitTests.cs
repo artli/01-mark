@@ -55,5 +55,27 @@ namespace MarkdownConverter.Tests {
                 "means that a new paragraph starts.</p>" +
                 "<p>Each paragraph should be enclosed in the paragraph tags.</p>");
         }
+
+        [TestMethod]
+        public void ManyLinebreaksInARow() {
+            TestConverter(
+                "A sequence of 2n+1 linebreaks\n" +
+                "\n" + 
+                "\n" +
+                "\n" +
+                "\n" +
+                "results in n new paragraphs and a linebreak in the beginning of the last one.\n" +
+                "If there's an even number of linebreaks in a row,\n" +
+                "\n" +
+                "only new paragraphs are created.",
+
+                
+                "<p>A sequence of 2n+1 linebreaks</p>" +
+                "<p></p>" +
+                "<p><br/>" +
+                "results in n new paragraphs and a linebreak in the beginning of the last one.<br/>" +
+                "If there's an even number of linebreaks in a row,</p>" +
+                "<p>only new paragraphs are created.</p>");
+        }
     }
 }

@@ -7,6 +7,9 @@ namespace MarkdownConverter.Tests {
     public class UnitTests {
         public void TestConverter(string inputText, string expectedResult) {
             var result = MarkdownConverter.ConvertToHTML(inputText);
+            for (int i = 0; i < result.Length; i++)
+                if (result[i] != expectedResult[i])
+                    i++;
             Assert.AreEqual(expectedResult, result);
         }
 
@@ -119,5 +122,50 @@ namespace MarkdownConverter.Tests {
 
                 "<p>Underscores <em>i_nside words</em> or<em> connecting_words </em>also shouldn't count as _forma_tting.</p>");
         }
+
+        [TestMethod]
+        public void SimpleEscaping() {
+            TestConverter(
+                "A slash before a symbol escapes that symbol.\n" +
+                "An escaped symbol should not be counted as a formatting symbol.\n" +
+                "For example, escaped \\_underscores\\_ should remain underscores\n" +
+                "Any other escaped \\symb\\ol should also remain the same",
+
+                "<p>A slash before a symbol escapes that symbol.<br/>" +
+                "An escaped symbol should not be counted as a formatting symbol.<br/>" +
+                "For example, escaped _underscores_ should remain underscores<br/>" +
+                "Any other escaped symbol should also remain the same</p>");
+        }
+
+        [TestMethod]
+        public void TwoSlashesInARow() {
+            TestConverter(
+                "Two slashes in a row (\\\\) should become one slash in the result.",
+
+                "<p>Two slashes in a row (\\) should become one slash in the result.</p>");
+        }
+
+        [TestMethod]
+        public void EndOfLineSlash() {
+            TestConverter(
+                "A slash in the end of a line should be ignored\\\n" +
+                "This includes the case of a slash in the end of all text.\\",
+
+                "<p>A slash in the end of a line should be ignored<br/>" +
+                "This includes the case of a slash in the end of all text.</p>");
+        }
+
+        [TestMethod]
+        public void ComplexEscapingExample() {
+            TestConverter(
+                "This is \\_an example\\\\\\_ of a text\n" +
+                "\\With symbols \\'escaped _in_ multiple\\' places\\.\\",
+
+                "<p>This is _an example\\_ of a text<br/>" +
+                "With symbols 'escaped <em>in</em> multiple' places.</p>");
+        }
+
+
+
     }
 }

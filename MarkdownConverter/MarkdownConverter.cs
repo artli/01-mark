@@ -72,28 +72,39 @@ namespace MarkdownConverter {
             }
         }
 
+        public static int FirstMatchingIndex<T>(IEnumerable<T> list, Func<T, bool> predicate) {
+            int index = 0;
+            foreach (var elem in list) {
+                if (predicate(elem))
+                    break;
+                index++;
+            }
+            return index;
+        }
+
         public static string[] DivideWord(string word) {
             if (word == "")
                 return new[] { "", "", "" };
 
-            var startIndex = 0;
-            foreach (var sym in word)
-                if (sym == '_')
-                    startIndex++;
-                else
-                    break;
+            var startIndex = FirstMatchingIndex(word, sym => (sym != '_'));
+            var firstPart = word.Substring(0, startIndex);
+            word = word.Remove(0, startIndex);
 
-            var endIndex = word.Length;
-            foreach (var sym in word.Reverse())
-                if (sym == '_')
-                    endIndex--;
-                else
-                    break;
+            var endIndex = word.Length - FirstMatchingIndex(word.Reverse(), sym => (sym != '_'));
+            var secondPart = word.Substring(0, endIndex);
+            var thirdPart = word.Substring(endIndex);
+
+            if (secondPart.Last() == '\\') {
+                if (thirdPart.Length > 0) {
+                    secondPart += thirdPart[0];
+                    thirdPart = thirdPart.Remove(0, 1);
+                }
+            }
 
             return new[] {
-                word.Substring(0, startIndex),
-                word.Substring(startIndex, endIndex - startIndex),
-                word.Substring(endIndex)
+                firstPart,
+                secondPart,
+                thirdPart
             };
         }
 
@@ -102,6 +113,20 @@ namespace MarkdownConverter {
                 throw new ArgumentOutOfRangeException();
 
             return formattingSymbols.Select(sym => new Token(TokenType.EmFormatting));
+        }
+
+        public static string Unescape(string text) {
+            var result = new List<char>();
+            for (int i = 0; i < text.Length; i++) {
+                if (text[i] == '\\') {
+                    if (i != text.Length - 1 && text[i + 1] == '\\') {
+                        result.Add('\\');
+                        i++;
+                    }
+                } else
+                    result.Add(text[i]);
+            }
+            return string.Join("", result);
         }
 
         public static Token[] Tokenize(string text) {
@@ -116,7 +141,7 @@ namespace MarkdownConverter {
                         var divided = DivideWord(words[word]);
 
                         tokens.AddRange(GetFormattingTokens(divided[0]));
-                        tokens.Add(new Token(TokenType.Text, divided[1]));
+                        tokens.Add(new Token(TokenType.Text, Unescape(divided[1])));
                         tokens.AddRange(GetFormattingTokens(divided[2]));
 
                         if (word != words.Length - 1)

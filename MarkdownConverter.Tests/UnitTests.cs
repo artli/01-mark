@@ -58,6 +58,17 @@ namespace MarkdownConverter.Tests {
         }
 
         [TestMethod]
+        public void WhitespaceBetweenLinebreaks() {
+            TestConverter(
+                "If two linebreaks are divided only by whitespace symbols,\n" +
+                "               \n" +
+                "They still start a new paragraph.",
+
+                "<p>If two linebreaks are divided only by whitespace symbols,</p>" +
+                "<p>They still start a new paragraph.</p>");
+        }
+
+        [TestMethod]
         public void ManyLinebreaksInARow() {
             TestConverter(
                 "A sequence of 2n+1 linebreaks\n" +

@@ -171,14 +171,41 @@ namespace MarkdownConverter {
             return tokens;
         }
 
+        public static List<List<string>> GetParagraphs(string text) {
+            var lines = text.Split('\n');
+            var paragraphs = new List<List<string>>();
+
+            var paragraph = new List<string>();
+            bool newParagraphStarts = true;
+            foreach (var line in lines) {
+                if (newParagraphStarts) {
+                    paragraph.Add(line);
+                    newParagraphStarts = false;
+                    continue;
+                }
+
+                if (line.All(char.IsWhiteSpace)) {
+                    paragraphs.Add(paragraph);
+                    paragraph = new List<string>();
+                    newParagraphStarts = true;
+                } else {
+                    paragraph.Add(line);
+                }
+            }
+            if (paragraph.Count != 0)
+                paragraphs.Add(paragraph);
+
+            return paragraphs;
+        }
+
         public static Token[] Tokenize(string text) {
             var tokens = new List<Token>();
 
-            var paragraphs = text.Split(new[] { "\n\n" }, StringSplitOptions.None);
-            for (var paragraph = 0; paragraph < paragraphs.Length; paragraph++) {
+            var paragraphs = GetParagraphs(text);
+            for (var paragraph = 0; paragraph < paragraphs.Count; paragraph++) {
                 var codeTagsCount = 0;
-                var lines = paragraphs[paragraph].Split('\n');
-                for (var line = 0; line < lines.Length; line++) {
+                var lines = paragraphs[paragraph];
+                for (var line = 0; line < lines.Count; line++) {
                     var words = lines[line].Split(' ');
                     for (var word = 0; word < words.Length; word++) {
                         var tokenizedWord = TokenizeWord(words[word]);
@@ -188,10 +215,10 @@ namespace MarkdownConverter {
                         if (word != words.Length - 1)
                             tokens.Add(new Token(TokenType.Text, " "));
                     }
-                    if (line != lines.Length - 1)
+                    if (line != lines.Count - 1)
                         tokens.Add(new Token(TokenType.Linebreak));
                 }
-                if (paragraph != paragraphs.Length - 1)
+                if (paragraph != paragraphs.Count - 1)
                     tokens.Add(new Token(TokenType.ParagraphBreak));
                 if (codeTagsCount % 2 == 1) {
                     var lastCodeTagIndex = tokens.FindLastIndex(token => token.Type == TokenType.CodeFormatting);

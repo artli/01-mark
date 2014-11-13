@@ -173,5 +173,81 @@ namespace MarkdownConverter.Tests {
                 "<p>Symbols in a word after an escaped symbol should be treated<br/>" +
                 "as symbols inside a word: <em>__asdf__</em></p>");
         }
+
+        [TestMethod]
+        public void SimpleStrongFormatting() {
+            TestConverter(
+                "Text __enclosed in double underscores__ should __become __enclosed in__ strong __tags.",
+
+                "<p>Text <strong>enclosed in double underscores</strong> should <strong>become </strong>enclosed in<strong> strong </strong>tags.</p>");
+        }
+
+        [TestMethod]
+        public void StrongAndEmCombined() {
+            TestConverter(
+                "Strong _formatting defined __by __double_ underscores should work inside __single _underscores' _scope__ and vice versa.",
+
+                "<p>Strong <em>formatting defined <strong>by </strong>double</em> underscores should work inside <strong>single <em>underscores' </em>scope</strong> and vice versa.</p>");
+        }
+
+        [TestMethod]
+        public void ThreeUnderscoresInARow() {
+            TestConverter(
+                "Three ___underscores in a row\n" +
+                "should mean both ___strong tag and em tag.\n" +
+                "\n" +
+                "The order ___in which__ the _tags appear depends on\n" +
+                "which _tag __was opened first___ or ___will later _be__ closed first.",
+
+                "<p>Three <em><strong>underscores in a row<br/>" +
+                "should mean both </strong></em>strong tag and em tag.</p>" +
+                "<p>The order <em><strong>in which</strong> the </em>tags appear depends on<br/>" +
+                "which <em>tag <strong>was opened first</strong></em> or <strong><em>will later </em>be</strong> closed first.</p>");
+        }
+
+        [TestMethod]
+        public void PartlyUnpairedThreeUnderscores() {
+            TestConverter(
+                "If one of the tags hidden behind three underscores is unpaired,\n" +
+                "the underscore __left untouched ___is chosen so that\n" +
+                "\n" +
+                "it's not ___influenced by _other underscores' tags.",
+
+                "<p>If one of the tags hidden behind three underscores is unpaired,<br/>" +
+                "the underscore <strong>left untouched </strong>_is chosen so that</p>" +
+                "<p>it's not __<em>influenced by </em>other underscores' tags.</p>");
+        }
+
+        [TestMethod]
+        public void ManyUndersoresInARow() {
+            TestConverter(
+                "If there is an even number of underscores in a row (more than two),\n" +
+                "the ____underscores____ should be ignored (they close themselves).\n" +
+                "\n" +
+                "If there's an odd number of underscores in a row (more than three),\n" +
+                "all _____underscores but_ one _____should be ignored.",
+
+                "<p>If there is an even number of underscores in a row (more than two),<br/>" +
+                "the underscores should be ignored (they close themselves).</p>" +
+                "<p>If there's an odd number of underscores in a row (more than three),<br/>" +
+                "all <em>underscores but</em> one _should be ignored.</p>");
+        }
+
+        [TestMethod]
+        public void ComplexUnderscoresUsage() {
+            TestConverter(
+                "All the rules described for single underscores usage\n" +
+                "and it's interaction with escaping\n" +
+                "should also work for multiple underscores.\n" +
+                "\n" +
+                "This is ___\\_an\\______ example\\\\_ of a__ text\n" +
+                "With complex usage ___of_ u_nderscores.",
+
+                "<p>All the rules described for single underscores usage<br/>" +
+                "and it's interaction with escaping<br/>" +
+                "should also work for multiple underscores.</p>" +
+                "<p>This is <strong><em>_an_</em> example\\_ of a</strong> text<br/>" +
+                "With complex usage __<em>of</em> u_nderscores.</p>");
+        }
     }
 }

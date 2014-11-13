@@ -5,15 +5,11 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace MarkdownConverter {
-    public static class IEnumerableExtension {
-        public static int FirstMatchingIndex<T>(this IEnumerable<T> list, Func<T, bool> predicate) {
-            int index = 0;
-            foreach (var elem in list) {
-                if (predicate(elem))
-                    break;
-                index++;
-            }
-            return index;
+    public static class InterfaceExtensions {
+        public static void Swap<T>(this IList<T> enumerable, int i1, int i2) {
+            var temp = enumerable[i1];
+            enumerable[i1] = enumerable[i2];
+            enumerable[i2] = temp;
         }
     }
 
@@ -24,6 +20,8 @@ namespace MarkdownConverter {
             Linebreak,
             ParagraphBreak,
             EmFormatting,
+            StrongFormatting,
+            EmAndStrong
         }
 
         public class Token : IEquatable<Token> {
@@ -33,14 +31,20 @@ namespace MarkdownConverter {
             public Token(TokenType type) {
                 Type = type;
                 switch (type) {
-                    case TokenType.EmFormatting:
-                        Text = "_";
-                        break;
                     case TokenType.Linebreak:
                         Text = "\n";
                         break;
                     case TokenType.ParagraphBreak:
                         Text = "\n\n";
+                        break;
+                    case TokenType.EmFormatting:
+                        Text = "_";
+                        break;
+                    case TokenType.StrongFormatting:
+                        Text = "__";
+                        break;
+                    case TokenType.EmAndStrong:
+                        Text = "___";
                         break;
                 }
             }
@@ -52,12 +56,14 @@ namespace MarkdownConverter {
 
             public string GetTagName() {
                 switch (Type) {
-                    case TokenType.EmFormatting:
-                        return "em";
                     case TokenType.Linebreak:
                         return "br";
                     case TokenType.ParagraphBreak:
                         return "p";
+                    case TokenType.EmFormatting:
+                        return "em";
+                    case TokenType.StrongFormatting:
+                        return "strong";
                     default:
                         return "";
                 }
@@ -84,11 +90,24 @@ namespace MarkdownConverter {
             }
         }
 
+
         public static IEnumerable<Token> GetFormattingTokens(string formattingString) {
             if (formattingString.Any(sym => sym != '_'))
                 throw new ArgumentOutOfRangeException();
+            
+            var tokens = new List<Token>();
+            var len = formattingString.Length;
+            if (len > 3)
+                len %= 2;
 
-            return formattingString.Select(sym => new Token(TokenType.EmFormatting));
+            if (len == 1)
+                tokens.Add(new Token(TokenType.EmFormatting));
+            else if (len == 2)
+                tokens.Add(new Token(TokenType.StrongFormatting));
+            else if (len == 3)
+                tokens.Add(new Token(TokenType.EmAndStrong));
+
+            return tokens;
         }
 
         public static string Unescape(string text) {
@@ -160,14 +179,75 @@ namespace MarkdownConverter {
         }
 
         public static int FindOpeningTag(List<Tuple<Token, int>> openingTagsWithPositions, Token next) {
-            return openingTagsWithPositions.FindLastIndex(elem => elem.Item1.Equals(next));
+            var tokensToFind = new List<Token>();
+            if (next.Type == TokenType.EmAndStrong) {
+                tokensToFind.Add(new Token(TokenType.EmFormatting));
+                tokensToFind.Add(new Token(TokenType.StrongFormatting));
+            } else
+                tokensToFind.Add(next);
+
+            return openingTagsWithPositions.FindLastIndex(elem => tokensToFind.Contains(elem.Item1));
+        }
+
+        public static void AddOpeningTag(List<Token> paragraph, List<Tuple<Token, int>> openingTagsWithPositions, Token next) {
+            var tokensToAdd = new List<Token>();
+            if (next.Type == TokenType.EmAndStrong) {
+                tokensToAdd.Add(new Token(TokenType.EmFormatting));
+                tokensToAdd.Add(new Token(TokenType.StrongFormatting));
+            } else
+                tokensToAdd.Add(next);
+
+            foreach (var token in tokensToAdd) {
+                openingTagsWithPositions.Add(Tuple.Create(token, paragraph.Count));
+                paragraph.Add(token);
+            }
         }
 
         public static void CloseTag(List<Token> paragraph, List<Tuple<Token, int>> openingTagsWithPositions, int openingTagIndex, Token next) {
+            var openingTagParagraphIndex = openingTagsWithPositions[openingTagIndex].Item2;
+            if (next.Type == TokenType.EmFormatting) {
+                if (openingTagParagraphIndex != paragraph.Count - 1 && paragraph[openingTagParagraphIndex + 1].Type == TokenType.StrongFormatting) {
+                    paragraph.Swap(openingTagParagraphIndex, openingTagParagraphIndex + 1);
+                    var first = openingTagsWithPositions[openingTagIndex];
+                    var second = openingTagsWithPositions[openingTagIndex + 1];
+                    openingTagsWithPositions[openingTagIndex] = Tuple.Create(second.Item1, second.Item2 - 1);
+                    openingTagsWithPositions[openingTagIndex + 1] = Tuple.Create(first.Item1, first.Item2 + 1);
+                    openingTagIndex++;
+                    openingTagParagraphIndex++;
+                }
+            }
             var openingTag = openingTagsWithPositions[openingTagIndex];
             openingTagsWithPositions.RemoveRange(openingTagIndex, openingTagsWithPositions.Count - openingTagIndex);
-            paragraph[openingTag.Item2] = next.TagAsText(true);
+            paragraph[openingTagParagraphIndex] = next.TagAsText(true);
             paragraph.Add(next.TagAsText(false));
+        }
+
+        public static void ProcessTag(List<Token> paragraph, List<Tuple<Token, int>> openingTagsWithPositions, Token next) {
+            var openingTagIndex = FindOpeningTag(openingTagsWithPositions, next);
+            if (openingTagIndex == -1)
+                AddOpeningTag(paragraph, openingTagsWithPositions, next);
+            else {
+                if (next.Type == TokenType.EmAndStrong) {
+                    Token tagToClose, tagToProcess;
+                    if (openingTagsWithPositions[openingTagIndex].Item1.Type == TokenType.StrongFormatting) {
+                        tagToClose = new Token(TokenType.StrongFormatting);
+                        tagToProcess = new Token(TokenType.EmFormatting);
+                    } else {
+                        tagToClose = new Token(TokenType.EmFormatting);
+                        tagToProcess = new Token(TokenType.StrongFormatting);
+                    }
+                    CloseTag(paragraph, openingTagsWithPositions, openingTagIndex, tagToClose);
+                    ProcessTag(paragraph, openingTagsWithPositions, tagToProcess);
+                } else
+                    CloseTag(paragraph, openingTagsWithPositions, openingTagIndex, next);
+            }
+        }
+
+        public static void FlushParagraph(List<Token> paragraph, StringBuilder html) {
+            html.Append("<p>");
+            foreach (var token in paragraph)
+                html.Append(token.Text);
+            html.Append("</p>");
         }
 
         public static string ConvertToHTML(string text) {
@@ -185,30 +265,17 @@ namespace MarkdownConverter {
                         paragraph.Add(next.TagAsText(true));
                         break;
                     case TokenType.ParagraphBreak:
-                        html.Append("<p>");
-                        foreach (var token in paragraph)
-                            html.Append(token.Text);
-                        html.Append("</p>");
-
+                        FlushParagraph(paragraph, html);
                         paragraph = new List<Token>();
                         openingTagsWithPositions = new List<Tuple<Token, int>>();
                         break;
                     default:
-                        var openingTagIndex = FindOpeningTag(openingTagsWithPositions, next);
-                        if (openingTagIndex == -1) {
-                            openingTagsWithPositions.Add(Tuple.Create(next, paragraph.Count));
-                            paragraph.Add(next);
-                        } else {
-                            CloseTag(paragraph, openingTagsWithPositions, openingTagIndex, next);
-                        }
+                        ProcessTag(paragraph, openingTagsWithPositions, next);
                         break;
                 }
             }
-            html.Append("<p>");
-            foreach (var token in paragraph)
-                html.Append(token.Text);
-            html.Append("</p>");
-
+            FlushParagraph(paragraph, html);
+            
             return html.ToString();
         }
     }

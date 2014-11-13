@@ -88,28 +88,30 @@ namespace MarkdownConverter.Tests {
         }
 
         [TestMethod]
-        public void UnderscoresInDifferentLinesAndParagraphs() {
-            TestConverter(
-                "_That should work\n" +
-                "even if underscores are in different lines_ _or\n" +
-                "\n" +
-                "even paragraphs._\n" +
-                "In _that_ case additional em tags may be added to ensure that tags don't intersect.",
-
-                "<p><em>That should work<br/>" +
-                "even if underscores are in different lines</em> <em>or</em></p>" +
-                "<p><em>even paragraphs.</em><br/>" +
-                "In <em>that</em> case additional em tags may be added to ensure that tags don't intersect.</p>");
-        }
-
-        [TestMethod]
         public void UnpairedUnderscores() {
             TestConverter(
                 "Unpaired underscores _should not count as proper formatting.\n" +
-                "They should be left as is.",
+                "They should be left untouched.",
 
                 "<p>Unpaired underscores _should not count as proper formatting.<br/>" +
-                "They should be left as is.</p>");
+                "They should be left untouched.</p>");
+        }
+
+        [TestMethod]
+        public void UnderscoresInDifferentLinesAndParagraphs() {
+            TestConverter(
+                "_Underscores formatting should work\n" +
+                "even if underscores are in different lines_\n" +
+                "If they are in different paragraphs _though,\n" +
+                "\n" +
+                "they should not_ be treated as a pair. Instead_\n" +
+                "the_ second underscore may be paired with another one in its paragraph.",
+
+                "<p><em>Underscores formatting should work<br/>" +
+                "even if underscores are in different lines</em><br/>" +
+                "If they are in different paragraphs _though,</p>" +
+                "<p>they should not<em> be treated as a pair. Instead</em><br/>" +
+                "the_ second underscore may be paired with another one in its paragraph.</p>");
         }
 
         [TestMethod]

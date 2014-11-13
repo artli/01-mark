@@ -187,20 +187,13 @@ namespace MarkdownConverter {
                         }
                         break;
                     case TokenType.ParagraphBreak:
-                        foreach (var tagWithParagraphPosition in Enumerable.Reverse(tagsWithParagraphPositions)) {
-                            paragraph[tagWithParagraphPosition.Item2] = tagWithParagraphPosition.Item1.TagAsText(true);
-                            paragraph.Add(tagWithParagraphPosition.Item1.TagAsText(false));
-                        }
                         html.Append("<p>");
                         foreach (var token in paragraph)
                             html.Append(token.Text);
                         html.Append("</p>");
 
                         paragraph = new List<Token>();
-                        for (int i = 0; i < tagsWithParagraphPositions.Count; i++) {
-                            paragraph.Add(tagsWithParagraphPositions[i].Item1);
-                            tagsWithParagraphPositions[i] = Tuple.Create(tagsWithParagraphPositions[i].Item1, i);
-                        }
+                        tagsWithParagraphPositions = new List<Tuple<Token, int>>();
                         break;
                 }
             }

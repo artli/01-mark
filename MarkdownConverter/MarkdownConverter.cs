@@ -114,13 +114,19 @@ namespace MarkdownConverter {
             var tokens = new List<Token>();
             var underscoresCount = 0;
             foreach (var sym in formattingString) {
-                if (sym == '`') {
-                    if (underscoresCount != 0)
-                        tokens.Add(GetUnderscoreToken(underscoresCount));
-                    underscoresCount = 0;
-                    tokens.Add(new Token(TokenType.CodeFormatting));
-                } else
+                if (sym == '_')
                     underscoresCount++;
+                else {
+                    if (underscoresCount != 0) {
+                        tokens.Add(GetUnderscoreToken(underscoresCount));
+                        underscoresCount = 0;
+                    }
+
+                    if (sym == '`')
+                        tokens.Add(new Token(TokenType.CodeFormatting));
+                    else
+                        tokens.Add(new Token(TokenType.Text, new String(sym, 1)));
+                }
             }
             if (underscoresCount != 0)
                 tokens.Add(GetUnderscoreToken(underscoresCount));
@@ -145,10 +151,12 @@ namespace MarkdownConverter {
             if (word == "")
                 return new List<Token>();
 
+            var allowedSymbols = new[] { '_', '`', '.', ',', ':', ';', '\'' };
+
             var index = 0;
             while (index < word.Length) {
                 var sym = word[index++];
-                if (sym != '_' && sym != '`') {
+                if (!allowedSymbols.Contains(sym)) {
                     index--;
                     break;
                 }
@@ -158,7 +166,7 @@ namespace MarkdownConverter {
             var wordEnd = index;
             while (index < word.Length) {
                 var sym = word[index++];
-                if (sym != '_' && sym != '`')
+                if (!allowedSymbols.Contains(sym))
                     wordEnd = index;
                 if (sym == '\\')
                     wordEnd = Math.Min(++index, word.Length);

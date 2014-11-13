@@ -134,6 +134,14 @@ namespace MarkdownConverter.Tests {
         }
 
         [TestMethod]
+        public void UnderscoresAndPunctuation() {
+            TestConverter(
+                "Punctuation symbols ('_._', '_,_', '_:_', '_;_', '_'_') shouldn't be considered parts of words. Hence they don't block formatting.",
+
+                "<p>Punctuation symbols ('<em>.</em>', '<em>,</em>', '<em>:</em>', '<em>;</em>', '<em>'</em>') shouldn't be considered parts of words. Hence they don't block formatting.</p>");
+        }
+
+        [TestMethod]
         public void SimpleEscaping() {
             TestConverter(
                 "A slash before a symbol escapes that symbol.\n" +

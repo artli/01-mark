@@ -5,6 +5,18 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace MarkdownConverter {
+    public static class IEnumerableExtension {
+        public static int FirstMatchingIndex<T>(this IEnumerable<T> list, Func<T, bool> predicate) {
+            int index = 0;
+            foreach (var elem in list) {
+                if (predicate(elem))
+                    break;
+                index++;
+            }
+            return index;
+        }
+    }
+
 
     public class MarkdownConverter {
         public enum TokenType {
@@ -51,12 +63,12 @@ namespace MarkdownConverter {
                 }
             }
 
-            public Token GetTagText(bool isOpening) {
+            public Token TagAsText(bool isOpeningTag) {
                 if (Type == TokenType.Linebreak)
                     return new Token(TokenType.Text, "<br/>");
 
                 var result = "<";
-                if (!isOpening)
+                if (!isOpeningTag)
                     result += "/";
                 result += GetTagName();
                 result += ">";
@@ -67,52 +79,16 @@ namespace MarkdownConverter {
                 return this.Type == second.Type && this.Text == second.Text;
             }
 
-            public string ToString() {
+            public override string ToString() {
                 return Text;
             }
         }
 
-        public static int FirstMatchingIndex<T>(IEnumerable<T> list, Func<T, bool> predicate) {
-            int index = 0;
-            foreach (var elem in list) {
-                if (predicate(elem))
-                    break;
-                index++;
-            }
-            return index;
-        }
-
-        public static string[] DivideWord(string word) {
-            if (word == "")
-                return new[] { "", "", "" };
-
-            var startIndex = FirstMatchingIndex(word, sym => (sym != '_'));
-            var firstPart = word.Substring(0, startIndex);
-            word = word.Remove(0, startIndex);
-
-            var endIndex = word.Length - FirstMatchingIndex(word.Reverse(), sym => (sym != '_'));
-            var secondPart = word.Substring(0, endIndex);
-            var thirdPart = word.Substring(endIndex);
-
-            if (secondPart.Last() == '\\') {
-                if (thirdPart.Length > 0) {
-                    secondPart += thirdPart[0];
-                    thirdPart = thirdPart.Remove(0, 1);
-                }
-            }
-
-            return new[] {
-                firstPart,
-                secondPart,
-                thirdPart
-            };
-        }
-
-        public static IEnumerable<Token> GetFormattingTokens(string formattingSymbols) {
-            if (formattingSymbols.Any(sym => sym != '_'))
+        public static IEnumerable<Token> GetFormattingTokens(string formattingString) {
+            if (formattingString.Any(sym => sym != '_'))
                 throw new ArgumentOutOfRangeException();
 
-            return formattingSymbols.Select(sym => new Token(TokenType.EmFormatting));
+            return formattingString.Select(sym => new Token(TokenType.EmFormatting));
         }
 
         public static string Unescape(string text) {
@@ -129,6 +105,36 @@ namespace MarkdownConverter {
             return string.Join("", result);
         }
 
+        public static IEnumerable<Token> TokenizeWord(string word) {
+            if (word == "")
+                return new List<Token>();
+
+            var index = 0;
+            while (index < word.Length) {
+                var sym = word[index++];
+                if (sym != '_') {
+                    index--;
+                    break;
+                }
+            }
+
+            var wordStart = index;
+            var wordEnd = index;
+            while (index < word.Length) {
+                var sym = word[index++];
+                if (sym != '_')
+                    wordEnd = index;
+                if (sym == '\\')
+                    wordEnd = Math.Min(++index, word.Length);
+            }
+
+            var tokens = new List<Token>();
+            tokens.AddRange(GetFormattingTokens(word.Substring(0, wordStart)));
+            tokens.Add(new Token(TokenType.Text, Unescape(word.Substring(wordStart, wordEnd - wordStart))));
+            tokens.AddRange(GetFormattingTokens(word.Substring(wordEnd)));
+            return tokens;
+        }
+
         public static Token[] Tokenize(string text) {
             var tokens = new List<Token>();
 
@@ -138,11 +144,7 @@ namespace MarkdownConverter {
                 for (var line = 0; line < lines.Length; line++) {
                     var words = lines[line].Split(' ');
                     for (var word = 0; word < words.Length; word++) {
-                        var divided = DivideWord(words[word]);
-
-                        tokens.AddRange(GetFormattingTokens(divided[0]));
-                        tokens.Add(new Token(TokenType.Text, Unescape(divided[1])));
-                        tokens.AddRange(GetFormattingTokens(divided[2]));
+                        tokens.AddRange(TokenizeWord(words[word]));
 
                         if (word != words.Length - 1)
                             tokens.Add(new Token(TokenType.Text, " "));
@@ -159,55 +161,55 @@ namespace MarkdownConverter {
 
         public static string ConvertToHTML(string text) {
             var tokens = Tokenize(text);
-            var result = new StringBuilder();
+            var html = new StringBuilder();
 
-            var tagsWithIndices = new List<Tuple<Token, int>>();
             var paragraph = new List<Token>();
+            var tagsWithParagraphPositions = new List<Tuple<Token, int>>();
             foreach (var next in tokens) {
                 switch (next.Type) {
                     case TokenType.Text:
                         paragraph.Add(next);
                         break;
                     case TokenType.Linebreak:
-                        paragraph.Add(next.GetTagText(true));
+                        paragraph.Add(next.TagAsText(true));
                         break;
                     case TokenType.EmFormatting:
-                        var sameTagIndex = tagsWithIndices.FindLastIndex(elem => elem.Item1.Equals(next));
+                        var sameTagIndex = tagsWithParagraphPositions.FindLastIndex(elem => elem.Item1.Equals(next));
                         if (sameTagIndex == -1) {
-                            tagsWithIndices.Add(Tuple.Create(next, paragraph.Count));
+                            tagsWithParagraphPositions.Add(Tuple.Create(next, paragraph.Count));
                             paragraph.Add(next);
                         } else {
-                            tagsWithIndices.RemoveRange(sameTagIndex + 1, tagsWithIndices.Count - sameTagIndex - 1);
-                            var sameTag = tagsWithIndices.Last();
-                            tagsWithIndices.RemoveAt(tagsWithIndices.Count - 1);
-                            paragraph[sameTag.Item2] = next.GetTagText(true);
-                            paragraph.Add(next.GetTagText(false));
+                            tagsWithParagraphPositions.RemoveRange(sameTagIndex + 1, tagsWithParagraphPositions.Count - (sameTagIndex + 1));
+                            var sameTag = tagsWithParagraphPositions.Last();
+                            tagsWithParagraphPositions.RemoveAt(tagsWithParagraphPositions.Count - 1);
+                            paragraph[sameTag.Item2] = next.TagAsText(true);
+                            paragraph.Add(next.TagAsText(false));
                         }
                         break;
                     case TokenType.ParagraphBreak:
-                        foreach (var tagIndexPair in Enumerable.Reverse(tagsWithIndices)) {
-                            paragraph[tagIndexPair.Item2] = tagIndexPair.Item1.GetTagText(true);
-                            paragraph.Add(tagIndexPair.Item1.GetTagText(false));
+                        foreach (var tagWithParagraphPosition in Enumerable.Reverse(tagsWithParagraphPositions)) {
+                            paragraph[tagWithParagraphPosition.Item2] = tagWithParagraphPosition.Item1.TagAsText(true);
+                            paragraph.Add(tagWithParagraphPosition.Item1.TagAsText(false));
                         }
-                        result.Append("<p>");
+                        html.Append("<p>");
                         foreach (var token in paragraph)
-                            result.Append(token.Text);
-                        result.Append("</p>");
+                            html.Append(token.Text);
+                        html.Append("</p>");
 
                         paragraph = new List<Token>();
-                        for (int i = 0; i < tagsWithIndices.Count; i++) {
-                            paragraph.Add(tagsWithIndices[i].Item1);
-                            tagsWithIndices[i] = Tuple.Create(tagsWithIndices[i].Item1, i);
+                        for (int i = 0; i < tagsWithParagraphPositions.Count; i++) {
+                            paragraph.Add(tagsWithParagraphPositions[i].Item1);
+                            tagsWithParagraphPositions[i] = Tuple.Create(tagsWithParagraphPositions[i].Item1, i);
                         }
                         break;
                 }
             }
-            result.Append("<p>");
+            html.Append("<p>");
             foreach (var token in paragraph)
-                result.Append(token.Text);
-            result.Append("</p>");
+                html.Append(token.Text);
+            html.Append("</p>");
 
-            return result.ToString();
+            return html.ToString();
         }
     }
 }

@@ -7,9 +7,6 @@ namespace MarkdownConverter.Tests {
     public class UnitTests {
         public void TestConverter(string inputText, string expectedResult) {
             var result = MarkdownConverter.ConvertToHTML(inputText);
-            for (int i = 0; i < result.Length; i++)
-                if (result[i] != expectedResult[i])
-                    i++;
             Assert.AreEqual(expectedResult, result);
         }
 

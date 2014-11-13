@@ -16,7 +16,7 @@ namespace ConsoleApp {
             return File.ReadAllLines(dataFilePath, Encoding.GetEncoding(1251));
         }
         private static void WriteData(string dataFilePath, string data) {
-            File.WriteAllText(dataFilePath, data);
+            File.WriteAllText(dataFilePath, data, Encoding.GetEncoding(1251));
         }
 
         static void Main(string[] args) {

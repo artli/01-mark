@@ -21,7 +21,8 @@ namespace MarkdownConverter {
             ParagraphBreak,
             EmFormatting,
             StrongFormatting,
-            EmAndStrong
+            EmAndStrong,
+            CodeFormatting
         }
 
         public class Token : IEquatable<Token> {
@@ -46,6 +47,9 @@ namespace MarkdownConverter {
                     case TokenType.EmAndStrong:
                         Text = "___";
                         break;
+                    case TokenType.CodeFormatting:
+                        Text = "`";
+                        break;
                 }
             }
 
@@ -64,6 +68,8 @@ namespace MarkdownConverter {
                         return "em";
                     case TokenType.StrongFormatting:
                         return "strong";
+                    case TokenType.CodeFormatting:
+                        return "code";
                     default:
                         return "";
                 }
@@ -90,23 +96,34 @@ namespace MarkdownConverter {
             }
         }
 
+        public static Token GetUnderscoreToken(int underscoresCount) {
+            if (underscoresCount > 3)
+                underscoresCount %= 2;
+
+            if (underscoresCount == 0)
+                return new Token(TokenType.Text, "");
+            if (underscoresCount == 1)
+                return new Token(TokenType.EmFormatting);
+            else if (underscoresCount == 2)
+                return new Token(TokenType.StrongFormatting);
+            else
+                return new Token(TokenType.EmAndStrong);
+        }
 
         public static IEnumerable<Token> GetFormattingTokens(string formattingString) {
-            if (formattingString.Any(sym => sym != '_'))
-                throw new ArgumentOutOfRangeException();
-            
             var tokens = new List<Token>();
-            var len = formattingString.Length;
-            if (len > 3)
-                len %= 2;
-
-            if (len == 1)
-                tokens.Add(new Token(TokenType.EmFormatting));
-            else if (len == 2)
-                tokens.Add(new Token(TokenType.StrongFormatting));
-            else if (len == 3)
-                tokens.Add(new Token(TokenType.EmAndStrong));
-
+            var underscoresCount = 0;
+            foreach (var sym in formattingString) {
+                if (sym == '`') {
+                    if (underscoresCount != 0)
+                        tokens.Add(GetUnderscoreToken(underscoresCount));
+                    underscoresCount = 0;
+                    tokens.Add(new Token(TokenType.CodeFormatting));
+                } else
+                    underscoresCount++;
+            }
+            if (underscoresCount != 0)
+                tokens.Add(GetUnderscoreToken(underscoresCount));
             return tokens;
         }
 
@@ -131,7 +148,7 @@ namespace MarkdownConverter {
             var index = 0;
             while (index < word.Length) {
                 var sym = word[index++];
-                if (sym != '_') {
+                if (sym != '_' && sym != '`') {
                     index--;
                     break;
                 }
@@ -141,7 +158,7 @@ namespace MarkdownConverter {
             var wordEnd = index;
             while (index < word.Length) {
                 var sym = word[index++];
-                if (sym != '_')
+                if (sym != '_' && sym != '`')
                     wordEnd = index;
                 if (sym == '\\')
                     wordEnd = Math.Min(++index, word.Length);
@@ -159,11 +176,14 @@ namespace MarkdownConverter {
 
             var paragraphs = text.Split(new[] { "\n\n" }, StringSplitOptions.None);
             for (var paragraph = 0; paragraph < paragraphs.Length; paragraph++) {
+                var codeTagsCount = 0;
                 var lines = paragraphs[paragraph].Split('\n');
                 for (var line = 0; line < lines.Length; line++) {
                     var words = lines[line].Split(' ');
                     for (var word = 0; word < words.Length; word++) {
-                        tokens.AddRange(TokenizeWord(words[word]));
+                        var tokenizedWord = TokenizeWord(words[word]);
+                        codeTagsCount += tokenizedWord.Count(token => token.Type == TokenType.CodeFormatting);
+                        tokens.AddRange(tokenizedWord);
 
                         if (word != words.Length - 1)
                             tokens.Add(new Token(TokenType.Text, " "));
@@ -173,6 +193,10 @@ namespace MarkdownConverter {
                 }
                 if (paragraph != paragraphs.Length - 1)
                     tokens.Add(new Token(TokenType.ParagraphBreak));
+                if (codeTagsCount % 2 == 1) {
+                    var lastCodeTagIndex = tokens.FindLastIndex(token => token.Type == TokenType.CodeFormatting);
+                    tokens[lastCodeTagIndex].Type = TokenType.Text;
+                }
             }
 
             return tokens.ToArray();
@@ -256,6 +280,7 @@ namespace MarkdownConverter {
 
             var paragraph = new List<Token>();
             var openingTagsWithPositions = new List<Tuple<Token, int>>();
+            bool enclosedInCodeTags = false;
             foreach (var next in tokens) {
                 switch (next.Type) {
                     case TokenType.Text:
@@ -269,8 +294,17 @@ namespace MarkdownConverter {
                         paragraph = new List<Token>();
                         openingTagsWithPositions = new List<Tuple<Token, int>>();
                         break;
+                    case TokenType.CodeFormatting:
+                        enclosedInCodeTags = !enclosedInCodeTags;
+                        paragraph.Add(next.TagAsText(enclosedInCodeTags));
+                        break;
                     default:
-                        ProcessTag(paragraph, openingTagsWithPositions, next);
+                        if (!enclosedInCodeTags)
+                            ProcessTag(paragraph, openingTagsWithPositions, next);
+                        else {
+                            next.Type = TokenType.Text;
+                            paragraph.Add(next);
+                        }
                         break;
                 }
             }

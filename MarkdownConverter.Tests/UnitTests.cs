@@ -249,5 +249,47 @@ namespace MarkdownConverter.Tests {
                 "<p>This is <strong><em>_an_</em> example\\_ of a</strong> text<br/>" +
                 "With complex usage __<em>of</em> u_nderscores.</p>");
         }
+
+        [TestMethod]
+        public void SimpleCodeFormatting() {
+            TestConverter(
+                "Test enclosed in backticks should become enclosed in code tags.\n" +
+                "_`Formatting_ symbols_ __inside __code ___tags _should__ have no effect and should be left untouched`_",
+
+                "<p>Test enclosed in backticks should become enclosed in code tags.<br/>" +
+                "<em><code>Formatting_ symbols_ __inside __code ___tags _should__ have no effect and should be left untouched</code></em></p>");
+        }
+
+        [TestMethod]
+        public void EscapingInsideCode() {
+            TestConverter(
+                "Escaping `should still\\ work \\\\inside code `tags.\n" +
+                "Backtick itself can be escaped `both _inside_ (\\`)` and outside (\\`) of code tags.",
+
+                "<p>Escaping <code>should still work \\inside code </code>tags.<br/>" +
+                "Backtick itself can be escaped <code>both _inside_ (`)</code> and outside (`) of code tags.</p>");
+        }
+
+        [TestMethod]
+        public void UnpairedBackticks() {
+            TestConverter(
+                "Unpaired backticks should not be treated as formatting 'symbols\n" +
+                "\n" +
+                "As well as in the case of `_underscores_` backticks can form a pair only inside the `same paragraph.",
+
+                "<p>Unpaired backticks should not be treated as formatting 'symbols</p>" +
+                "<p>As well as in the case of <code>_underscores_</code> backticks can form a pair only inside the `same paragraph.</p>");
+        }
+
+        [TestMethod]
+        public void BackticksInsideWords() {
+            TestConverter(
+                "Backticks inside wor`ds should not be counted as formatting and should not pair with other `backticks.\n" +
+                "\n" +
+                "As earlier, any escaped _\\_`symbol`\\__ is considered being inside a word.",
+
+                "<p>Backticks inside wor`ds should not be counted as formatting and should not pair with other `backticks.</p>" +
+                "<p>As earlier, any escaped <em>_`symbol`_</em> is considered being inside a word.</p>");
+        }
     }
 }

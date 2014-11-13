@@ -159,12 +159,23 @@ namespace MarkdownConverter {
             return tokens.ToArray();
         }
 
+        public static int FindOpeningTag(List<Tuple<Token, int>> openingTagsWithPositions, Token next) {
+            return openingTagsWithPositions.FindLastIndex(elem => elem.Item1.Equals(next));
+        }
+
+        public static void CloseTag(List<Token> paragraph, List<Tuple<Token, int>> openingTagsWithPositions, int openingTagIndex, Token next) {
+            var openingTag = openingTagsWithPositions[openingTagIndex];
+            openingTagsWithPositions.RemoveRange(openingTagIndex, openingTagsWithPositions.Count - openingTagIndex);
+            paragraph[openingTag.Item2] = next.TagAsText(true);
+            paragraph.Add(next.TagAsText(false));
+        }
+
         public static string ConvertToHTML(string text) {
             var tokens = Tokenize(text);
             var html = new StringBuilder();
 
             var paragraph = new List<Token>();
-            var tagsWithParagraphPositions = new List<Tuple<Token, int>>();
+            var openingTagsWithPositions = new List<Tuple<Token, int>>();
             foreach (var next in tokens) {
                 switch (next.Type) {
                     case TokenType.Text:
@@ -173,19 +184,6 @@ namespace MarkdownConverter {
                     case TokenType.Linebreak:
                         paragraph.Add(next.TagAsText(true));
                         break;
-                    case TokenType.EmFormatting:
-                        var sameTagIndex = tagsWithParagraphPositions.FindLastIndex(elem => elem.Item1.Equals(next));
-                        if (sameTagIndex == -1) {
-                            tagsWithParagraphPositions.Add(Tuple.Create(next, paragraph.Count));
-                            paragraph.Add(next);
-                        } else {
-                            tagsWithParagraphPositions.RemoveRange(sameTagIndex + 1, tagsWithParagraphPositions.Count - (sameTagIndex + 1));
-                            var sameTag = tagsWithParagraphPositions.Last();
-                            tagsWithParagraphPositions.RemoveAt(tagsWithParagraphPositions.Count - 1);
-                            paragraph[sameTag.Item2] = next.TagAsText(true);
-                            paragraph.Add(next.TagAsText(false));
-                        }
-                        break;
                     case TokenType.ParagraphBreak:
                         html.Append("<p>");
                         foreach (var token in paragraph)
@@ -193,7 +191,16 @@ namespace MarkdownConverter {
                         html.Append("</p>");
 
                         paragraph = new List<Token>();
-                        tagsWithParagraphPositions = new List<Tuple<Token, int>>();
+                        openingTagsWithPositions = new List<Tuple<Token, int>>();
+                        break;
+                    default:
+                        var openingTagIndex = FindOpeningTag(openingTagsWithPositions, next);
+                        if (openingTagIndex == -1) {
+                            openingTagsWithPositions.Add(Tuple.Create(next, paragraph.Count));
+                            paragraph.Add(next);
+                        } else {
+                            CloseTag(paragraph, openingTagsWithPositions, openingTagIndex, next);
+                        }
                         break;
                 }
             }

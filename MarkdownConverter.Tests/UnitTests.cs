@@ -151,7 +151,7 @@ namespace MarkdownConverter.Tests {
                 "<p>A slash in the end of a line should be ignored<br/>" +
                 "This includes the case of a slash in the end of all text.</p>");
         }
-
+        
         [TestMethod]
         public void ComplexEscapingExample() {
             TestConverter(
@@ -162,7 +162,14 @@ namespace MarkdownConverter.Tests {
                 "With symbols 'escaped <em>in</em> multiple' places.</p>");
         }
 
+        [TestMethod]
+        public void UnderscoresAfterEscaping() {
+            TestConverter(
+                "Symbols in a word after an escaped symbol should be treated\n" +
+                "as symbols inside a word: _\\__asdf_\\__",
 
-
+                "<p>Symbols in a word after an escaped symbol should be treated<br/>" +
+                "as symbols inside a word: <em>__asdf__</em></p>");
+        }
     }
 }

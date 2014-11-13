@@ -291,5 +291,15 @@ namespace MarkdownConverter.Tests {
                 "<p>Backticks inside wor`ds should not be counted as formatting and should not pair with other `backticks.</p>" +
                 "<p>As earlier, any escaped <em>_`symbol`_</em> is considered being inside a word.</p>");
         }
+
+        [TestMethod]
+        public void HTMLEntities() {
+            TestConverter(
+                "Less-than signs, greater-then signs and apostrophes in any positions should be replaced with corresponding HTML entities:\n" +
+                "'<' becomes '&lt;', '>' becomes '&gt;', '&' becomes '&amp;'.",
+
+                "<p>Less-than signs, greater-then signs and apostrophes in any positions should be replaced with corresponding HTML entities:<br/>" +
+                "'&lt;' becomes '&amp;lt;', '&gt;' becomes '&amp;gt;', '&amp;' becomes '&amp;amp;'.</p>");
+        }
     }
 }

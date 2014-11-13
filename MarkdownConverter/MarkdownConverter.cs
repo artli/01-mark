@@ -274,7 +274,28 @@ namespace MarkdownConverter {
             html.Append("</p>");
         }
 
+        public static string ReplaceSpecialSymbols(string text) {
+            var specialSymbols = new Dictionary<char, string>()
+            {
+                {'<', "&lt;"},
+                {'>', "&gt;"},
+                {'&', "&amp;"}
+            };
+
+            var result = new StringBuilder();
+            var index = -1;
+            while (++index < text.Length) {
+                var c = text[index];
+                if (specialSymbols.ContainsKey(c))
+                    result.Append(specialSymbols[c]);
+                else
+                    result.Append(c);
+            }
+            return result.ToString();
+        }
+
         public static string ConvertToHTML(string text) {
+            text = ReplaceSpecialSymbols(text);
             var tokens = Tokenize(text);
             var html = new StringBuilder();
 

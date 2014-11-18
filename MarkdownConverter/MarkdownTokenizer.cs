@@ -6,116 +6,6 @@ using System.Threading.Tasks;
 
 namespace MarkdownConverter {
     public class MarkdownTokenizer {
-        public static Token GetUnderscoreToken(int underscoresCount) {
-            if (underscoresCount > 3)
-                underscoresCount %= 2;
-
-            if (underscoresCount == 0)
-                return new Token(TokenType.Text, "");
-            if (underscoresCount == 1)
-                return new Token(TokenType.EmFormatting);
-            else if (underscoresCount == 2)
-                return new Token(TokenType.StrongFormatting);
-            else
-                return new Token(TokenType.EmAndStrong);
-        }
-
-        public static IEnumerable<Token> GetFormattingTokens(string formattingString) {
-            var tokens = new List<Token>();
-            var underscoresCount = 0;
-            foreach (var sym in formattingString) {
-                if (sym == '_')
-                    underscoresCount++;
-                else {
-                    if (underscoresCount != 0) {
-                        tokens.Add(GetUnderscoreToken(underscoresCount));
-                        underscoresCount = 0;
-                    }
-
-                    if (sym == '`')
-                        tokens.Add(new Token(TokenType.CodeFormatting));
-                    else
-                        tokens.Add(new Token(TokenType.Text, new String(sym, 1)));
-                }
-            }
-            if (underscoresCount != 0)
-                tokens.Add(GetUnderscoreToken(underscoresCount));
-            return tokens;
-        }
-
-        public static string Unescape(string text) {
-            var result = new List<char>();
-            for (int i = 0; i < text.Length; i++) {
-                if (text[i] == '\\') {
-                    if (i != text.Length - 1 && text[i + 1] == '\\') {
-                        result.Add('\\');
-                        i++;
-                    }
-                } else
-                    result.Add(text[i]);
-            }
-            return string.Join("", result);
-        }
-
-        public static IEnumerable<Token> TokenizeWord(string word) {
-            if (word == "")
-                return new List<Token>();
-
-            var allowedSymbols = new[] { '_', '`', '.', ',', ':', ';', '\'' };
-
-            var index = 0;
-            while (index < word.Length) {
-                var sym = word[index++];
-                if (!allowedSymbols.Contains(sym)) {
-                    index--;
-                    break;
-                }
-            }
-
-            var wordStart = index;
-            var wordEnd = index;
-            while (index < word.Length) {
-                var sym = word[index++];
-                if (!allowedSymbols.Contains(sym))
-                    wordEnd = index;
-                if (sym == '\\')
-                    wordEnd = Math.Min(++index, word.Length);
-            }
-
-            var tokens = new List<Token>();
-            tokens.AddRange(GetFormattingTokens(word.Substring(0, wordStart)));
-            tokens.Add(new Token(TokenType.Text, Unescape(word.Substring(wordStart, wordEnd - wordStart))));
-            tokens.AddRange(GetFormattingTokens(word.Substring(wordEnd)));
-            return tokens;
-        }
-
-        public static List<List<string>> GetParagraphs(string text) {
-            var lines = text.Split('\n');
-            var paragraphs = new List<List<string>>();
-
-            var paragraph = new List<string>();
-            bool newParagraphStarts = true;
-            foreach (var line in lines) {
-                if (newParagraphStarts) {
-                    paragraph.Add(line);
-                    newParagraphStarts = false;
-                    continue;
-                }
-
-                if (line.All(char.IsWhiteSpace)) {
-                    paragraphs.Add(paragraph);
-                    paragraph = new List<string>();
-                    newParagraphStarts = true;
-                } else {
-                    paragraph.Add(line);
-                }
-            }
-            if (paragraph.Count != 0)
-                paragraphs.Add(paragraph);
-
-            return paragraphs;
-        }
-
         public static Token[] Tokenize(string text) {
             var tokens = new List<Token>();
 
@@ -145,6 +35,115 @@ namespace MarkdownConverter {
             }
 
             return tokens.ToArray();
+        }
+
+        public static List<List<string>> GetParagraphs(string text) {
+            var lines = text.Split('\n');
+            var paragraphs = new List<List<string>>();
+
+            var currentParagraph = new List<string>();
+            bool newParagraphStarts = true;
+            foreach (var line in lines) {
+                if (newParagraphStarts) {
+                    currentParagraph.Add(line);
+                    newParagraphStarts = false;
+                    continue;
+                }
+
+                if (line.All(char.IsWhiteSpace)) {
+                    paragraphs.Add(currentParagraph);
+                    currentParagraph = new List<string>();
+                    newParagraphStarts = true;
+                } else
+                    currentParagraph.Add(line);
+            }
+            if (currentParagraph.Count != 0)
+                paragraphs.Add(currentParagraph);
+
+            return paragraphs;
+        }
+
+        public static IEnumerable<Token> TokenizeWord(string word) {
+            if (word == "")
+                return new List<Token>();
+
+            var symbolsNotStartingAWord = new[] { '_', '`', '.', ',', ':', ';', '\'' };
+
+            var index = 0;
+            while (index < word.Length) {
+                var sym = word[index++];
+                if (!symbolsNotStartingAWord.Contains(sym)) {
+                    index--;
+                    break;
+                }
+            }
+
+            var wordStart = index;
+            var wordEnd = index;
+            while (index < word.Length) {
+                var sym = word[index++];
+                if (!symbolsNotStartingAWord.Contains(sym))
+                    wordEnd = index;
+                if (sym == '\\')
+                    wordEnd = Math.Min(++index, word.Length);
+            }
+
+            var tokens = new List<Token>();
+            tokens.AddRange(GetFormattingTokens(word.Substring(0, wordStart)));
+            tokens.Add(new Token(TokenType.Text, Unescape(word.Substring(wordStart, wordEnd - wordStart))));
+            tokens.AddRange(GetFormattingTokens(word.Substring(wordEnd)));
+            return tokens;
+        }
+
+        public static string Unescape(string text) {
+            var result = new List<char>();
+            for (int i = 0; i < text.Length; i++) {
+                if (text[i] == '\\') {
+                    if (i != text.Length - 1 && text[i + 1] == '\\') {
+                        result.Add('\\');
+                        i++;
+                    }
+                } else
+                    result.Add(text[i]);
+            }
+            return string.Join("", result);
+        }
+
+        public static IEnumerable<Token> GetFormattingTokens(string formattingString) {
+            var tokens = new List<Token>();
+            var underscoresCount = 0;
+            foreach (var sym in formattingString) {
+                if (sym == '_')
+                    underscoresCount++;
+                else {
+                    if (underscoresCount != 0) {
+                        tokens.Add(GetUnderscoreToken(underscoresCount));
+                        underscoresCount = 0;
+                    }
+
+                    if (sym == '`')
+                        tokens.Add(new Token(TokenType.CodeFormatting));
+                    else
+                        tokens.Add(new Token(TokenType.Text, new String(sym, 1)));
+                }
+            }
+            if (underscoresCount != 0)
+                tokens.Add(GetUnderscoreToken(underscoresCount));
+            return tokens;
+        }
+
+        public static Token GetUnderscoreToken(int underscoresCount) {
+            if (underscoresCount > 3)
+                underscoresCount %= 2;
+
+            if (underscoresCount == 0)
+                return new Token(TokenType.Text, "");
+            if (underscoresCount == 1)
+                return new Token(TokenType.EmFormatting);
+            else if (underscoresCount == 2)
+                return new Token(TokenType.StrongFormatting);
+            else
+                return new Token(TokenType.EmAndStrong);
         }
     }
 }

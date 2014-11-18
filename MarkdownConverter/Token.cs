@@ -69,12 +69,13 @@ namespace MarkdownConverter {
             if (Type == TokenType.Linebreak)
                 return new Token(TokenType.Text, "<br/>");
 
-            var result = "<";
-            if (!isOpeningTag)
-                result += "/";
-            result += GetTagName();
-            result += ">";
-            return new Token(TokenType.Text, result);
+            var openingFormat = "<{0}>";
+            var closingFormat = "</{0}>";
+
+            if (isOpeningTag)
+                return new Token(TokenType.Text, string.Format(openingFormat, GetTagName()));
+            else
+                return new Token(TokenType.Text, string.Format(closingFormat, GetTagName()));
         }
 
         public bool Equals(Token second) {
